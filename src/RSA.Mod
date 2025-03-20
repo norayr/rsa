@@ -6,13 +6,13 @@ CONST
 
 TYPE
   KeyPair* = RECORD
-    n*, e*, d*, phi*: LONGINT  (* Public modulus, public exponent, private exponent *)
+    n*, e*, d*, phi*: HUGEINT  (* Public modulus, public exponent, private exponent *)
   END;
 
 (* Compute (base^exp) MOD mod using modular exponentiation *)
-PROCEDURE ModExp*(base, exp, mod: LONGINT): LONGINT;
+PROCEDURE ModExp*(base, exp, mod: HUGEINT): HUGEINT;
 VAR
-  result: LONGINT;
+  result: HUGEINT;
 BEGIN
   result := 1;
   base := base MOD mod;
@@ -27,9 +27,9 @@ BEGIN
 END ModExp;
 
 (* Compute the greatest common divisor using Euclidean algorithm *)
-PROCEDURE GCD(a, b: LONGINT): LONGINT;
+PROCEDURE GCD(a, b: HUGEINT): HUGEINT;
 VAR
-  temp: LONGINT;
+  temp: HUGEINT;
 BEGIN
   WHILE b # 0 DO
     temp := b;
@@ -40,14 +40,16 @@ BEGIN
 END GCD;
 
 (* Compute modular inverse using the Extended Euclidean algorithm *)
-PROCEDURE ModInverse*(e, phi: LONGINT): LONGINT;
+(*
+PROCEDURE ModInverse*(e, phi: HUGEINT): HUGEINT;
 BEGIN
   RETURN ModExp(e, phi - 1, phi); (* Uses modular exponentiation *)
 END ModInverse;
-(*
-PROCEDURE ModInverse*(e, phi: LONGINT): LONGINT;
+*)
+
+PROCEDURE ModInverse*(e, phi: HUGEINT): HUGEINT;
 VAR
-  t, newt, r, newr, quotient, temp: LONGINT;
+  t, newt, r, newr, quotient, temp: HUGEINT;
 BEGIN
   t := 0; newt := 1;
   r := phi; newr := e;
@@ -83,11 +85,11 @@ BEGIN
 
   RETURN t
 END ModInverse;
-*)
+
 (* Generate prime numbers (naïve approach) *)
-PROCEDURE GeneratePrime(): LONGINT;
+PROCEDURE GeneratePrime(): HUGEINT;
 VAR
-  candidate, i, sqrtCandidate: LONGINT;
+  candidate, i, sqrtCandidate: HUGEINT;
   isPrime: BOOLEAN;
 BEGIN
   REPEAT
@@ -111,7 +113,7 @@ END GeneratePrime;
 (* Generate RSA Key Pair *)
 PROCEDURE GenerateKeys*(VAR key: KeyPair);
 VAR
-  p, q: LONGINT;
+  p, q: HUGEINT;
 BEGIN
   p := GeneratePrime();
   q := GeneratePrime();
@@ -133,13 +135,13 @@ BEGIN
 END GenerateKeys;
 
 (* Encrypt a message *)
-PROCEDURE Encrypt*(msg, e, n: LONGINT): LONGINT;
+PROCEDURE Encrypt*(msg, e, n: HUGEINT): HUGEINT;
 BEGIN
   RETURN ModExp(msg, e, n);
 END Encrypt;
 
 (* Decrypt a message *)
-PROCEDURE Decrypt*(cipher, d, n: LONGINT): LONGINT;
+PROCEDURE Decrypt*(cipher, d, n: HUGEINT): HUGEINT;
 BEGIN
   RETURN ModExp(cipher, d, n);
 END Decrypt;

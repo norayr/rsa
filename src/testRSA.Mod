@@ -3,7 +3,7 @@ IMPORT RSA, Out;
 
 VAR
   key: RSA.KeyPair;
-  msg, encrypted, decrypted: LONGINT;
+  msg, encrypted, decrypted: HUGEINT;
 
 BEGIN
   (* Step 1: Generate RSA Key Pair *)
