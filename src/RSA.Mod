@@ -16,13 +16,24 @@ VAR
 BEGIN
   result := 1;
   base := base MOD mod;
+
+  Out.String("ModExp: base="); Out.Int(base, 0);
+  Out.String(", exp="); Out.Int(exp, 0);
+  Out.String(", mod="); Out.Int(mod, 0); Out.Ln();
+
   WHILE exp > 0 DO
     IF (exp MOD 2) # 0 THEN
       result := (result * base) MOD mod;
+      Out.String("ModExp step: result="); Out.Int(result, 0); Out.Ln();
     END;
     exp := exp DIV 2;
     base := (base * base) MOD mod;
+    Out.String("ModExp step: base="); Out.Int(base, 0);
+    Out.String(", exp="); Out.Int(exp, 0); Out.Ln();
   END;
+
+  Out.String("Final ModExp result: "); Out.Int(result, 0); Out.Ln();
+
   RETURN result;
 END ModExp;
 
@@ -120,6 +131,10 @@ BEGIN
   key.n := p * q;
   key.phi := (p - 1) * (q - 1);
 
+    Out.String("Generated primes: ");
+    Out.Int(p, 0); Out.String(", "); Out.Int(q, 0); Out.Ln();
+    Out.String("Computed n (p * q): "); Out.Int(key.n, 0); Out.Ln();
+
   (* Choose public exponent e *)
   key.e := 65537; (* Common choice *)
   WHILE (GCD(key.e, key.phi) # 1) DO
@@ -137,12 +152,20 @@ END GenerateKeys;
 (* Encrypt a message *)
 PROCEDURE Encrypt*(msg, e, n: HUGEINT): HUGEINT;
 BEGIN
+  Out.String("Encrypting: msg="); Out.Int(msg, 0);
+  Out.String(", e="); Out.Int(e, 0);
+  Out.String(", n="); Out.Int(n, 0); Out.Ln();
+
   RETURN ModExp(msg, e, n);
 END Encrypt;
 
 (* Decrypt a message *)
 PROCEDURE Decrypt*(cipher, d, n: HUGEINT): HUGEINT;
 BEGIN
+  Out.String("Decrypting: cipher="); Out.Int(cipher, 0);
+  Out.String(", d="); Out.Int(d, 0);
+  Out.String(", n="); Out.Int(n, 0); Out.Ln();
+
   RETURN ModExp(cipher, d, n);
 END Decrypt;
 
