@@ -19,9 +19,12 @@ BEGIN
   Out.String("Original Message: "); Out.Int(msg, 0); Out.Ln();
 
   (* Step 3: Encrypt message *)
-  encrypted := RSA.Encrypt(msg, key.e, key.n);
-  Out.String("Encrypted Message: "); Out.Int(encrypted, 0); Out.Ln();
-
+  IF msg >= key.n THEN
+    Out.String("Error: Message is too large for encryption"); Out.Ln()
+  ELSE
+    encrypted := RSA.Encrypt(msg, key.e, key.n);
+    Out.String("Encrypted Message: "); Out.Int(encrypted, 0); Out.Ln();
+  END;
   (* Step 4: Decrypt message *)
   decrypted := RSA.Decrypt(encrypted, key.d, key.n);
   Out.String("Decrypted Message: "); Out.Int(decrypted, 0); Out.Ln();
