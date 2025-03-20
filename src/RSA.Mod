@@ -1,172 +1,446 @@
 MODULE RSA;
-IMPORT Math, Random := ulmRandomGenerators, SYSTEM, Out;
+IMPORT SYSTEM, Out, Random := ulmRandomGenerators, MathL;
 
 CONST
-  BITLEN = 1024; (* Key length in bits, can be adjusted *)
+  BITLEN = 32;
+  SMALLPRIMES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31};
 
 TYPE
+  BigInt* = SYSTEM.SET64; (* 64-bit unsigned integer *)
   KeyPair* = RECORD
-    n*, e*, d*, phi*: HUGEINT  (* Public modulus, public exponent, private exponent *)
+    n*, e*, d*, phi*: BigInt;
   END;
 
-(* Compute (base^exp) MOD mod using modular exponentiation *)
-PROCEDURE ModExp*(base, exp, mod: HUGEINT): HUGEINT;
-VAR
-  result: HUGEINT;
+
+PROCEDURE ToInt*(n: BigInt): HUGEINT;
+VAR i: HUGEINT;
 BEGIN
-  result := 1;
-  base := base MOD mod;
-
-  Out.String("ModExp: base="); Out.Int(base, 0);
-  Out.String(", exp="); Out.Int(exp, 0);
-  Out.String(", mod="); Out.Int(mod, 0); Out.Ln();
-
-  WHILE exp > 0 DO
-    IF (exp MOD 2) # 0 THEN
-      result := (result * base) MOD mod;
-      Out.String("ModExp step: result="); Out.Int(result, 0); Out.Ln();
-    END;
-    exp := exp DIV 2;
-    base := (base * base) MOD mod;
-    Out.String("ModExp step: base="); Out.Int(base, 0);
-    Out.String(", exp="); Out.Int(exp, 0); Out.Ln();
-  END;
-
-  Out.String("Final ModExp result: "); Out.Int(result, 0); Out.Ln();
-
-  RETURN result;
-END ModExp;
-
-(* Compute the greatest common divisor using Euclidean algorithm *)
-PROCEDURE GCD(a, b: HUGEINT): HUGEINT;
-VAR
-  temp: HUGEINT;
-BEGIN
-  WHILE b # 0 DO
-    temp := b;
-    b := a MOD b;
-    a := temp;
-  END;
-  RETURN a;
-END GCD;
-
-(* Compute modular inverse using the Extended Euclidean algorithm *)
+  SYSTEM.GET(SYSTEM.ADR(n), i);
+  RETURN i;
+  (*RETURN i MOD 2000000000;*)
+END ToInt;
 (*
-PROCEDURE ModInverse*(e, phi: HUGEINT): HUGEINT;
+PROCEDURE ToInt*(n: BigInt): HUGEINT;
+VAR i: HUGEINT;
 BEGIN
-  RETURN ModExp(e, phi - 1, phi); (* Uses modular exponentiation *)
-END ModInverse;
+  SYSTEM.GET(SYSTEM.ADR(n), i);
+  Out.String("ToInt: "); Out.Int(ToInt(n), 0); Out.String(" -> "); Out.Int(i, 0); Out.Ln();
+  RETURN i;
+END ToInt;
+*)
+(*
+PROCEDURE ToBigInt*(n: HUGEINT): BigInt;
+VAR b: BigInt;
+BEGIN
+  SYSTEM.PUT(SYSTEM.ADR(b), n);
+  RETURN b;
+END ToBigInt;
+*)
+PROCEDURE ToBigInt*(n: HUGEINT): BigInt;
+VAR b: BigInt;
+BEGIN
+  SYSTEM.PUT(SYSTEM.ADR(b), n);
+  Out.String("ToBigInt: "); Out.Int(n, 0); Out.String(" -> "); Out.Int(ToInt(b), 0); Out.Ln();
+  RETURN b;
+END ToBigInt;
+
+
+(* Fast modular exponentiation using Exponentiation by Squaring *)
+(*
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  result: BigInt;
+  b, e, m, res: HUGEINT;
+BEGIN
+  res := 1;
+  b := ToInt(base);
+  m := ToInt(mod);
+  e := ToInt(exp);
+
+  (* Ensure base < mod *)
+  b := b MOD m;
+
+  WHILE e > 0 DO
+    IF (e MOD 2) = 1 THEN
+      res := (res * b) MOD m;
+    END;
+    e := e DIV 2;
+    b := (b * b) MOD m;
+  END;
+
+  RETURN ToBigInt(res);
+END ModExp;
+*)
+(*PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  result: BigInt;
+BEGIN
+  result := ToBigInt(1);
+  base := SYSTEM.VAL(BigInt, ToInt(base) MOD ToInt(mod)); (* Ensure base < mod *)
+
+  WHILE exp # {} DO
+    IF exp * {0} # {} THEN (* Check lowest bit *)
+      result := SYSTEM.VAL(BigInt, (ToInt(result) * ToInt(base)) MOD ToInt(mod));
+    END;
+    exp := SYSTEM.VAL(BigInt, ToInt(exp) DIV 2);
+    base := SYSTEM.VAL(BigInt, (ToInt(base) * ToInt(base)) MOD ToInt(mod));
+  END;
+
+  RETURN SYSTEM.VAL(BigInt, ToInt(result) MOD ToInt(mod)); (* Keep in range *)
+END ModExp;
+*)
+(*
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  result: BigInt;
+BEGIN
+  result := ToBigInt(1);
+  base := SYSTEM.VAL(BigInt, ToInt(base) MOD ToInt(mod)); (* Ensure base < mod *)
+
+  WHILE exp # {} DO
+    Out.String("ModExp Step: base="); Out.Int(ToInt(base), 0);
+    Out.String(" exp="); Out.Int(ToInt(exp), 0);
+    Out.String(" result="); Out.Int(ToInt(result), 0); Out.Ln();
+
+    IF exp * {0} # {} THEN (* Check lowest bit *)
+      result := SYSTEM.VAL(BigInt, (ToInt(result) * ToInt(base)) MOD ToInt(mod));
+    END;
+    exp := SYSTEM.VAL(BigInt, ToInt(exp) DIV 2);
+    base := SYSTEM.VAL(BigInt, (ToInt(base) * ToInt(base)) MOD ToInt(mod));
+  END;
+
+  RETURN SYSTEM.VAL(BigInt, ToInt(result) MOD ToInt(mod)); (* Keep in range *)
+END ModExp;
+*)
+(*
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  result: BigInt;
+BEGIN
+  result := ToBigInt(1);
+  base := SYSTEM.VAL(BigInt, ToInt(base) MOD ToInt(mod)); (* Ensure base < mod *)
+
+  WHILE exp # {} DO
+    IF exp * {0} # {} THEN
+      result := SYSTEM.VAL(BigInt, (ToInt(result) * ToInt(base)) MOD ToInt(mod));
+    END;
+    exp := SYSTEM.VAL(BigInt, ToInt(exp) DIV 2);
+    base := SYSTEM.VAL(BigInt, (ToInt(base) * ToInt(base)) MOD ToInt(mod));
+  END;
+
+  (* Print final ModExp result *)
+  Out.String("Final ModExp Result: "); Out.Int(ToInt(result), 0); Out.Ln();
+
+  RETURN SYSTEM.VAL(BigInt, ToInt(result) MOD ToInt(mod));
+END ModExp;
+*)
+(*
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  res, b, e, m: HUGEINT;
+BEGIN
+  res := 1;
+  b := ToInt(base);
+  e := ToInt(exp);
+  m := ToInt(mod);
+
+  b := b MOD m; (* Ensure base < mod *)
+
+  WHILE e > 0 DO
+    IF (e MOD 2) = 1 THEN
+      res := (res * b) MOD m;
+    END;
+    e := e DIV 2;
+    b := (b * b) MOD m;
+  END;
+
+  RETURN ToBigInt(res);
+END ModExp;
+*)
+(*
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  res, b, e, m: HUGEINT;
+BEGIN
+  res := 1;
+  b := ToInt(base);
+  e := ToInt(exp);
+  m := ToInt(mod);
+
+  Out.String("Starting ModExp: base="); Out.Int(b, 0);
+  Out.String(" exp="); Out.Int(e, 0);
+  Out.String(" mod="); Out.Int(m, 0); Out.Ln();
+
+  b := b MOD m; (* Ensure base < mod *)
+
+  WHILE e > 0 DO
+    IF (e MOD 2) = 1 THEN
+      res := (res * b) MOD m;
+    END;
+    e := e DIV 2;
+    b := (b * b) MOD m;
+
+    (* Print debug info *)
+    Out.String("ModExp Step: res="); Out.Int(res, 0);
+    Out.String(" b="); Out.Int(b, 0);
+    Out.String(" e="); Out.Int(e, 0); Out.Ln();
+  END;
+
+  Out.String("Final ModExp Result: "); Out.Int(res, 0); Out.Ln();
+  RETURN ToBigInt(res);
+END ModExp;
+*)
+(*
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  res, b, e, m: HUGEINT;
+BEGIN
+  res := 1;
+  b := ToInt(base) MOD ToInt(mod);  (* Ensure base < mod *)
+  e := ToInt(exp);
+  m := ToInt(mod);
+
+  WHILE e > 0 DO
+    IF (e MOD 2) = 1 THEN
+      res := (res * b) MOD m;
+    END;
+    e := e DIV 2;
+    b := (b * b) MOD m;
+  END;
+
+  RETURN ToBigInt(res MOD m);  (* Ensure result stays in range *)
+END ModExp;
 *)
 
-PROCEDURE ModInverse*(e, phi: HUGEINT): HUGEINT;
+PROCEDURE ModExp*(base, exp, mod: BigInt): BigInt;
+VAR
+  res, b, e, m: HUGEINT;
+BEGIN
+  res := 1;
+  b := ToInt(base) MOD ToInt(mod);  (* Ensure base < mod *)
+  e := ToInt(exp);
+  m := ToInt(mod);
+
+  (* Debug output *)
+  Out.String("Starting ModExp: base="); Out.Int(b, 0);
+  Out.String(" exp="); Out.Int(e, 0);
+  Out.String(" mod="); Out.Int(m, 0); Out.Ln();
+
+  WHILE e > 0 DO
+    IF (e MOD 2) = 1 THEN
+      (* Use separate temporary variables to avoid overflow *)
+      res := (res * b) MOD m;
+    END;
+    e := e DIV 2;
+    b := (b * b) MOD m;
+
+    (* Debug output - keep track of values *)
+    Out.String("ModExp Step: res="); Out.Int(res, 0);
+    Out.String(" b="); Out.Int(b, 0);
+    Out.String(" e="); Out.Int(e, 0); Out.Ln();
+  END;
+
+  Out.String("Final Result: "); Out.Int(res, 0); Out.Ln();
+  RETURN ToBigInt(res);
+END ModExp;
+
+(*
+PROCEDURE ModInverse*(e, phi: BigInt): BigInt;
 VAR
   t, newt, r, newr, quotient, temp: HUGEINT;
 BEGIN
-  t := 0; newt := 1;
-  r := phi; newr := e;
+  t := 0;
+  newt := 1;
+  r := ToInt(phi);
+  newr := ToInt(e);
 
   WHILE newr # 0 DO
     quotient := r DIV newr;
 
-    (* Swap t and newt *)
+    (* Update values *)
     temp := newt;
     newt := t - quotient * newt;
     t := temp;
 
-    (* Swap r and newr *)
     temp := newr;
     newr := r - quotient * newr;
     r := temp;
   END;
 
-  (* If gcd(e, phi) ≠ 1, no modular inverse exists *)
+  IF r > 1 THEN RETURN ToBigInt(0) END; (* No modular inverse exists *)
+  IF t < 0 THEN t := t + ToInt(phi) END;
+
+  RETURN ToBigInt(t);
+END ModInverse;
+*)
+(*
+PROCEDURE ModInverse*(a, phi: BigInt): BigInt;
+VAR
+  t, newt, r, newr, quotient, temp: BigInt;
+BEGIN
+  t := ToBigInt(0); newt := ToBigInt(1);
+  r := phi; newr := a;
+
+  WHILE newr # {} DO
+    quotient := SYSTEM.VAL(BigInt, ToInt(r) DIV ToInt(newr));
+
+    (* Debugging *)
+    Out.String("ModInverse Step: r="); Out.Int(ToInt(r), 0);
+    Out.String(" newr="); Out.Int(ToInt(newr), 0);
+    Out.String(" quotient="); Out.Int(ToInt(quotient), 0); Out.Ln();
+
+    temp := newt;
+    newt := SYSTEM.VAL(BigInt, ToInt(t) - ToInt(quotient) * ToInt(newt));
+    t := temp;
+
+    temp := newr;
+    newr := SYSTEM.VAL(BigInt, ToInt(r) - ToInt(quotient) * ToInt(newr));
+    r := temp;
+  END;
+
+  IF ToInt(r) # 1 THEN RETURN ToBigInt(0) END; (* No modular inverse *)
+
+  IF ToInt(t) < 0 THEN
+    t := SYSTEM.VAL(BigInt, ToInt(t) + ToInt(phi));
+  END;
+
+  RETURN t;
+END ModInverse;
+*)
+(*
+PROCEDURE ModInverse*(e, phi: BigInt): BigInt;
+VAR
+  t, newt, r, newr, quotient, temp: HUGEINT;
+BEGIN
+  t := 0; newt := 1;
+  r := ToInt(phi);
+  newr := ToInt(e);
+
+  WHILE newr # 0 DO
+    quotient := r DIV newr;
+
+    temp := newt;
+    newt := t - quotient * newt;
+    t := temp;
+
+    temp := newr;
+    newr := r - quotient * newr;
+    r := temp;
+  END;
+
+  IF r > 1 THEN RETURN ToBigInt(0) END; (* No modular inverse *)
+
+  IF t < 0 THEN t := t + ToInt(phi) END;
+
+  RETURN ToBigInt(t);
+END ModInverse;
+*)
+(*
+PROCEDURE ModInverse*(e, phi: BigInt): BigInt;
+VAR
+  t, newt, r, newr, quotient, temp: HUGEINT;
+BEGIN
+  t := 0; newt := 1;
+  r := ToInt(phi);
+  newr := ToInt(e);
+
+  WHILE newr # 0 DO
+    quotient := r DIV newr;
+
+    temp := newt;
+    newt := t - quotient * newt;
+    t := temp;
+
+    temp := newr;
+    newr := r - quotient * newr;
+    r := temp;
+  END;
+
+  IF r > 1 THEN RETURN ToBigInt(0) END; (* No modular inverse *)
+
+  (* Ensure result is positive *)
+  IF t < 0 THEN t := t + ToInt(phi) END;
+
+  RETURN ToBigInt(t MOD ToInt(phi));  (* Keep result in range *)
+END ModInverse;
+*)
+PROCEDURE ModInverse*(e, phi: BigInt): BigInt;
+VAR
+  t, newt, r, newr, quotient, temp: HUGEINT;
+BEGIN
+  t := 0; newt := 1;
+  r := ToInt(phi);
+  newr := ToInt(e);
+
+  WHILE newr # 0 DO
+    quotient := r DIV newr;
+
+    temp := newt;
+    newt := t - quotient * newt;
+    t := temp;
+
+    temp := newr;
+    newr := r - quotient * newr;
+    r := temp;
+  END;
+
+  (* If r ≠ 1, `e` has no modular inverse mod phi(n) *)
   IF r # 1 THEN
-    Out.String("Error: No modular inverse found!"); Out.Ln();
-    RETURN -1
+    Out.String("Error: `e` has no modular inverse mod phi(n)"); Out.Ln();
+    RETURN ToBigInt(0);
   END;
 
   (* Ensure result is positive *)
-  IF t < 0 THEN
-    t := t + phi;
-  END;
+  IF t < 0 THEN t := t + ToInt(phi) END;
 
-  (* Debugging output *)
-  Out.String("Computed Modular Inverse: "); Out.Int(t, 0); Out.Ln();
-  Out.String("(e * d) mod phi: "); Out.Int((e * t) MOD phi, 0); Out.Ln();
-
-  RETURN t
+  RETURN ToBigInt(t MOD ToInt(phi)); (* Keep result within range *)
 END ModInverse;
 
-(* Generate prime numbers (naïve approach) *)
-PROCEDURE GeneratePrime(): HUGEINT;
+
+
+(* Check if a number is prime using SMALLPRIMES and trial division *)
+PROCEDURE IsPrime*(n: BigInt): BOOLEAN;
 VAR
-  candidate, i, sqrtCandidate: HUGEINT;
-  isPrime: BOOLEAN;
+  i, sqrtN, ni: INTEGER;
+  sqrtLong: LONGREAL;
 BEGIN
-  REPEAT
-    candidate := Random.Val(1000, 5000); (* Pick a number in range *)
-    isPrime := TRUE;
+  SYSTEM.GET(SYSTEM.ADR(n), ni);
+  IF ni < 2 THEN RETURN FALSE END;
+  IF ni IN SMALLPRIMES THEN RETURN TRUE END;
+  IF (ni MOD 2) = 0 THEN RETURN FALSE END; (* Even numbers >2 are composite *)
 
-    sqrtCandidate := Math.round(Math.sqrt(SYSTEM.VAL(REAL, candidate))); (* Corrected type conversion *)
+  (* Convert ni to LONGREAL safely *)
+  SYSTEM.GET(SYSTEM.ADR(ni), sqrtLong);
+  sqrtLong := MathL.sqrt(sqrtLong);
 
-    i := 2;
-    WHILE i <= sqrtCandidate DO
-      IF (candidate MOD i) = 0 THEN
-        isPrime := FALSE;
-      END;
-      INC(i);
-    END;
+  (* Convert to INTEGER safely *)
+  sqrtN := SYSTEM.VAL(INTEGER, MathL.round(sqrtLong));
 
-  UNTIL isPrime;
-  RETURN candidate;
-END GeneratePrime;
-
-(* Generate RSA Key Pair *)
-PROCEDURE GenerateKeys*(VAR key: KeyPair);
-VAR
-  p, q: HUGEINT;
-BEGIN
-  p := GeneratePrime();
-  q := GeneratePrime();
-  key.n := p * q;
-  key.phi := (p - 1) * (q - 1);
-
-    Out.String("Generated primes: ");
-    Out.Int(p, 0); Out.String(", "); Out.Int(q, 0); Out.Ln();
-    Out.String("Computed n (p * q): "); Out.Int(key.n, 0); Out.Ln();
-
-  (* Choose public exponent e *)
-  key.e := 65537; (* Common choice *)
-  WHILE (GCD(key.e, key.phi) # 1) DO
-    key.e := key.e + 2;
+  i := 3;
+  WHILE i <= sqrtN DO
+    IF (ni MOD i) = 0 THEN RETURN FALSE END;
+    i := i + 2;
   END;
 
-  (* Compute private exponent d *)
-  key.d := ModInverse(key.e, key.phi);
-  IF key.d = -1 THEN GenerateKeys(key) END; (* Retry if modular inverse fails *)
-  Out.String("Checking (e * d) mod phi: ");
-  Out.Int((key.e * key.d) MOD key.phi, 0); Out.Ln;
+  RETURN TRUE;
+END IsPrime;
 
-END GenerateKeys;
-
-(* Encrypt a message *)
-PROCEDURE Encrypt*(msg, e, n: HUGEINT): HUGEINT;
+(* Generate a random prime number *)
+PROCEDURE GeneratePrime*(): BigInt;
+VAR
+  candidate: INTEGER;
+  prime: BigInt;
 BEGIN
-  Out.String("Encrypting: msg="); Out.Int(msg, 0);
-  Out.String(", e="); Out.Int(e, 0);
-  Out.String(", n="); Out.Int(n, 0); Out.Ln();
+  REPEAT
+    (*candidate := SYSTEM.VAL(INTEGER, Random.Val(1000, 5000));*)
+    (*candidate := SYSTEM.VAL(INTEGER, Random.Val(30000, 65000));*)
+    candidate := SYSTEM.VAL(INTEGER, Random.Val(30000, 65000));
+    IF candidate < 0 THEN candidate := -candidate END;  (* Ensure it's positive *)
 
-  RETURN ModExp(msg, e, n);
-END Encrypt;
 
-(* Decrypt a message *)
-PROCEDURE Decrypt*(cipher, d, n: HUGEINT): HUGEINT;
-BEGIN
-  Out.String("Decrypting: cipher="); Out.Int(cipher, 0);
-  Out.String(", d="); Out.Int(d, 0);
-  Out.String(", n="); Out.Int(n, 0); Out.Ln();
-
-  RETURN ModExp(cipher, d, n);
-END Decrypt;
+    prime := ToBigInt(candidate);
+  UNTIL IsPrime(prime);
+  RETURN prime;
+END GeneratePrime;
 
 END RSA.
