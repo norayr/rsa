@@ -31,6 +31,10 @@ BEGIN
     Out.String("RSA encryption/decryption SUCCESS!"); Out.Ln();
   ELSE
     Out.String("RSA encryption/decryption FAILED!"); Out.Ln();
+    Out.String("Check values: "); Out.Ln;
+    Out.String("n: "); Out.Int(key.n, 0); Out.String(", e: "); Out.Int(key.e, 0); Out.String(", d: "); Out.Int(key.d, 0); Out.Ln;
+    Out.String("phi: "); Out.Int(key.phi, 0); Out.Ln;
+    Out.String("Check (e * d) mod phi: "); Out.Int((key.e * key.d) MOD key.phi, 0); Out.Ln;
   END;
 END testRSA.
 

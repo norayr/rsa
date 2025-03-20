@@ -6,7 +6,7 @@ CONST
 
 TYPE
   KeyPair* = RECORD
-    n*, e*, d*: LONGINT  (* Public modulus, public exponent, private exponent *)
+    n*, e*, d*, phi*: LONGINT  (* Public modulus, public exponent, private exponent *)
   END;
 
 (* Compute (base^exp) MOD mod using modular exponentiation *)
@@ -41,6 +41,11 @@ END GCD;
 
 (* Compute modular inverse using the Extended Euclidean algorithm *)
 PROCEDURE ModInverse*(e, phi: LONGINT): LONGINT;
+BEGIN
+  RETURN ModExp(e, phi - 1, phi); (* Uses modular exponentiation *)
+END ModInverse;
+(*
+PROCEDURE ModInverse*(e, phi: LONGINT): LONGINT;
 VAR
   t, newt, r, newr, quotient, temp: LONGINT;
 BEGIN
@@ -50,20 +55,35 @@ BEGIN
   WHILE newr # 0 DO
     quotient := r DIV newr;
 
+    (* Swap t and newt *)
     temp := newt;
     newt := t - quotient * newt;
     t := temp;
 
+    (* Swap r and newr *)
     temp := newr;
     newr := r - quotient * newr;
     r := temp;
   END;
 
-  IF r > 1 THEN RETURN -1 END; (* No modular inverse exists *)
-  IF t < 0 THEN t := t + phi END;
-  RETURN t;
-END ModInverse;
+  (* If gcd(e, phi) ≠ 1, no modular inverse exists *)
+  IF r # 1 THEN
+    Out.String("Error: No modular inverse found!"); Out.Ln();
+    RETURN -1
+  END;
 
+  (* Ensure result is positive *)
+  IF t < 0 THEN
+    t := t + phi;
+  END;
+
+  (* Debugging output *)
+  Out.String("Computed Modular Inverse: "); Out.Int(t, 0); Out.Ln();
+  Out.String("(e * d) mod phi: "); Out.Int((e * t) MOD phi, 0); Out.Ln();
+
+  RETURN t
+END ModInverse;
+*)
 (* Generate prime numbers (naïve approach) *)
 PROCEDURE GeneratePrime(): LONGINT;
 VAR
@@ -91,22 +111,25 @@ END GeneratePrime;
 (* Generate RSA Key Pair *)
 PROCEDURE GenerateKeys*(VAR key: KeyPair);
 VAR
-  p, q, phi: LONGINT;
+  p, q: LONGINT;
 BEGIN
   p := GeneratePrime();
   q := GeneratePrime();
   key.n := p * q;
-  phi := (p - 1) * (q - 1);
+  key.phi := (p - 1) * (q - 1);
 
   (* Choose public exponent e *)
   key.e := 65537; (* Common choice *)
-  WHILE (GCD(key.e, phi) # 1) DO
+  WHILE (GCD(key.e, key.phi) # 1) DO
     key.e := key.e + 2;
   END;
 
   (* Compute private exponent d *)
-  key.d := ModInverse(key.e, phi);
+  key.d := ModInverse(key.e, key.phi);
   IF key.d = -1 THEN GenerateKeys(key) END; (* Retry if modular inverse fails *)
+  Out.String("Checking (e * d) mod phi: ");
+  Out.Int((key.e * key.d) MOD key.phi, 0); Out.Ln;
+
 END GenerateKeys;
 
 (* Encrypt a message *)
